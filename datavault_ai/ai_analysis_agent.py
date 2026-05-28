@@ -638,6 +638,39 @@ def normalize_result(result: Dict[str, Any]) -> Dict[str, Any]:
     return normalized
 
 
+def ai_unavailable_response(question: str, error: Exception | str) -> Dict[str, Any]:
+    message = str(error)
+    is_rate_limited = "rate" in message.lower() or "429" in message
+    reason = (
+        "Groq was rate-limited"
+        if is_rate_limited
+        else "the AI analysis service is temporarily unavailable"
+    )
+
+    return normalize_result(
+        {
+            "question": question,
+            "answer": (
+                f"AI analysis is temporarily unavailable because {reason}. "
+                "Kindly come back later."
+            ),
+            "analysis_mode": "ai_unavailable",
+            "insights": [
+                "AI analysis is temporarily unavailable.",
+                f"Reason: {reason}.",
+                "Kindly come back later and try the same question again.",
+            ],
+            "recommended_followups": [
+                "Try again later",
+                "Check Groq usage limits",
+            ],
+            "tables": [],
+            "charts": [],
+            "debug_code": None,
+        }
+    )
+
+
 def first_existing_column(df: pd.DataFrame, candidates: list[str]) -> str | None:
     for column in candidates:
         if column in df.columns:
@@ -1114,7 +1147,7 @@ def answer_dataset_question_with_ai(question: str, dataset_path: str) -> Dict[st
     try:
         generated_code = generate_analysis_code(question, df)
     except Exception as ai_error:
-        return fallback_analysis(question, df, [str(ai_error)])
+        return ai_unavailable_response(question, ai_error)
 
     try:
         raw_result = run_analysis_code_safely(generated_code, df)
@@ -1125,11 +1158,7 @@ def answer_dataset_question_with_ai(question: str, dataset_path: str) -> Dict[st
             raw_result = run_analysis_code_safely(repaired_code, df)
             generated_code = repaired_code
         except Exception as second_error:
-            return fallback_analysis(
-                question,
-                df,
-                [str(first_error), str(second_error)],
-            )
+            return ai_unavailable_response(question, second_error)
 
     try:
         polished = polish_response(question, raw_result)
@@ -1143,6 +1172,7 @@ def answer_dataset_question_with_ai(question: str, dataset_path: str) -> Dict[st
     return normalize_result({
         "question": question,
         "answer": polished.get("answer", raw_result.get("answer")),
+        "analysis_mode": "ai_generated",
         "insights": polished.get("insights", raw_result.get("insights", [])),
         "recommended_followups": polished.get("recommended_followups", []),
         "tables": raw_result.get("tables", []),
