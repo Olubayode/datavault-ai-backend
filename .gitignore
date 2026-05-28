@@ -1,0 +1,9 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+.env
+ai_result.json
+ai_charts/
+backend/uvicorn*.log
+backend/uvicorn*.pid
