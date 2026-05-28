@@ -15,6 +15,17 @@ app.add_middleware(
 )
 
 
+@app.get("/")
+def root():
+    return {
+        "name": "Datavault AI Analytics API",
+        "status": "online",
+        "docs": "/docs",
+        "health": "/health",
+        "analytics": "/analytics/ask",
+    }
+
+
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
