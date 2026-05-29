@@ -10,4 +10,4 @@ scipy
 scikit-learn
 statsmodels
 python-multipart
-pydantic
+pydantic[email]

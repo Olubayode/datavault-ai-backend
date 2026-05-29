@@ -6,6 +6,10 @@ ai_result.json
 ai_charts/
 backend/uvicorn*.log
 backend/uvicorn*.pid
+backend/storage/
+storage/
+frontend/node_modules/
+frontend/dist/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
