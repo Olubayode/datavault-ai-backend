@@ -1152,7 +1152,10 @@ def answer_dataset_question_with_ai(question: str, dataset_path: str) -> Dict[st
     try:
         raw_result = run_analysis_code_safely(generated_code, df)
     except Exception as first_error:
-        repaired_code = repair_analysis_code(question, df, generated_code, first_error)
+        try:
+            repaired_code = repair_analysis_code(question, df, generated_code, first_error)
+        except Exception as repair_error:
+            return ai_unavailable_response(question, repair_error)
 
         try:
             raw_result = run_analysis_code_safely(repaired_code, df)
