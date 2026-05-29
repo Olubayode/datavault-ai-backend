@@ -26,6 +26,7 @@ http://localhost:8010/docs
 GROQ_API_KEY=your_groq_key
 GROQ_FAST_MODEL=llama-3.1-8b-instant
 GROQ_COMPLEX_MODEL=llama-3.3-70b-versatile
+AI_ANALYSIS_TIMEOUT_SECONDS=60
 ```
 
 5. Deploy.

@@ -13,5 +13,7 @@ services:
         value: llama-3.3-70b-versatile
       - key: DEFAULT_DATASET_PATH
         value: sample-data/Chile_real_estate_listings.csv
+      - key: AI_ANALYSIS_TIMEOUT_SECONDS
+        value: "60"
       - key: GROQ_API_KEY
         sync: false

@@ -156,11 +156,37 @@ def choose_model_for_question(question: str) -> str:
     return GROQ_FAST_MODEL
 
 
+def is_complex_question(question: str) -> bool:
+    return choose_model_for_question(question) == GROQ_COMPLEX_MODEL
+
+
+def prompt_scope_for_question(question: str) -> str:
+    if is_complex_question(question):
+        return """
+This is a complex analytics request.
+- You may create multiple useful tables and Plotly charts.
+- Use advanced methods only when they directly help answer the question.
+- Keep expensive operations bounded for large datasets.
+"""
+
+    return """
+This is a simple analytics request.
+- Answer the exact question directly and quickly.
+- Prefer one direct pandas calculation over broad exploratory analysis.
+- Do not perform clustering, regression, forecasting, correlation matrices,
+  outlier detection, or full-dataset profiling unless explicitly asked.
+- Do not create charts unless the user asks for a chart or visualization.
+- Returning an empty charts list is acceptable for simple questions.
+- Use at most one small table if it helps answer the question.
+"""
+
+
 def generate_analysis_code(question: str, df: pd.DataFrame) -> str:
     if not GROQ_API_KEY:
         raise RuntimeError("GROQ_API_KEY is not configured.")
 
     profile = get_dataset_profile(df)
+    scope_rules = prompt_scope_for_question(question)
     prompt = f"""
 You are Datavault's autonomous AI analytics engine.
 
@@ -173,6 +199,9 @@ Dataset profile:
 
 User question:
 {question}
+
+Question scope:
+{scope_rules}
 
 Write Python code only. Define exactly one public function:
 
@@ -373,9 +402,11 @@ def validate_code_safety(code: str) -> None:
 def run_analysis_code_safely(
     code: str,
     df: pd.DataFrame,
-    timeout_seconds: int = 20,
+    timeout_seconds: int | None = None,
 ) -> Dict[str, Any]:
     validate_code_safety(code)
+    if timeout_seconds is None:
+        timeout_seconds = int(os.getenv("AI_ANALYSIS_TIMEOUT_SECONDS", "60"))
 
     with tempfile.TemporaryDirectory() as tmpdir:
         dataset_path = os.path.join(tmpdir, "dataset.csv")
