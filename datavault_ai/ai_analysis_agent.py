@@ -688,6 +688,8 @@ def ai_unavailable_response(
         if is_rate_limited
         else "the AI analysis service is temporarily unavailable"
     )
+    print(f"AI_UNAVAILABLE_ERROR_TYPE={type(error).__name__}", flush=True)
+    print(f"AI_UNAVAILABLE_ERROR_MESSAGE={message[:1000]}", flush=True)
 
     return normalize_result(
         {
