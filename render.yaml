@@ -7,7 +7,9 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
-      - key: GROQ_MODEL
+      - key: GROQ_FAST_MODEL
+        value: llama-3.1-8b-instant
+      - key: GROQ_COMPLEX_MODEL
         value: llama-3.3-70b-versatile
       - key: DEFAULT_DATASET_PATH
         value: sample-data/Chile_real_estate_listings.csv

@@ -15,7 +15,11 @@ from openai import OpenAI
 
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+GROQ_FAST_MODEL = os.getenv("GROQ_FAST_MODEL", "llama-3.1-8b-instant")
+GROQ_COMPLEX_MODEL = os.getenv(
+    "GROQ_COMPLEX_MODEL",
+    os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
+)
 
 client = OpenAI(
     api_key=GROQ_API_KEY or "missing-groq-api-key",
@@ -118,6 +122,38 @@ def extract_code(raw: str) -> str:
     if fenced:
         return fenced.group(1).strip()
     return raw
+
+
+def choose_model_for_question(question: str) -> str:
+    text = question.lower()
+    complex_keywords = [
+        "full analysis",
+        "full report",
+        "report",
+        "dashboard",
+        "all insights",
+        "trend",
+        "forecast",
+        "predict",
+        "prediction",
+        "cluster",
+        "clustering",
+        "segment",
+        "segmentation",
+        "correlation",
+        "regression",
+        "outlier",
+        "anomaly",
+        "recommendation",
+        "recommendations",
+        "compare",
+        "drivers",
+        "explain",
+        "why",
+    ]
+    if len(question) > 140 or any(keyword in text for keyword in complex_keywords):
+        return GROQ_COMPLEX_MODEL
+    return GROQ_FAST_MODEL
 
 
 def generate_analysis_code(question: str, df: pd.DataFrame) -> str:
@@ -278,8 +314,9 @@ Rules:
 - Return only Python code. No markdown fences. No explanation outside code.
 """
 
+    model = choose_model_for_question(question)
     response = client.chat.completions.create(
-        model=GROQ_MODEL,
+        model=model,
         messages=[
             {
                 "role": "system",
@@ -511,8 +548,9 @@ Do not use unsafe imports, file operations, network calls, os, sys, subprocess,
 requests, pathlib, open, eval, exec, importlib, pickle, or joblib.
 """
 
+    model = choose_model_for_question(question)
     response = client.chat.completions.create(
-        model=GROQ_MODEL,
+        model=model,
         messages=[
             {
                 "role": "system",
@@ -638,7 +676,11 @@ def normalize_result(result: Dict[str, Any]) -> Dict[str, Any]:
     return normalized
 
 
-def ai_unavailable_response(question: str, error: Exception | str) -> Dict[str, Any]:
+def ai_unavailable_response(
+    question: str,
+    error: Exception | str,
+    analysis_model: str | None = None,
+) -> Dict[str, Any]:
     message = str(error)
     is_rate_limited = "rate" in message.lower() or "429" in message
     reason = (
@@ -655,6 +697,7 @@ def ai_unavailable_response(question: str, error: Exception | str) -> Dict[str, 
                 "Kindly come back later."
             ),
             "analysis_mode": "ai_unavailable",
+            "analysis_model": analysis_model or choose_model_for_question(question),
             "insights": [
                 "AI analysis is temporarily unavailable.",
                 f"Reason: {reason}.",
@@ -1121,8 +1164,9 @@ Rules:
 - Mention chart/table titles when relevant.
 """
 
+    model = choose_model_for_question(question)
     response = client.chat.completions.create(
-        model=GROQ_MODEL,
+        model=model,
         messages=[
             {"role": "system", "content": "Return JSON only."},
             {"role": "user", "content": prompt},
@@ -1143,11 +1187,12 @@ Rules:
 
 def answer_dataset_question_with_ai(question: str, dataset_path: str) -> Dict[str, Any]:
     df = load_dataset(dataset_path)
+    analysis_model = choose_model_for_question(question)
 
     try:
         generated_code = generate_analysis_code(question, df)
     except Exception as ai_error:
-        return ai_unavailable_response(question, ai_error)
+        return ai_unavailable_response(question, ai_error, analysis_model)
 
     try:
         raw_result = run_analysis_code_safely(generated_code, df)
@@ -1155,13 +1200,13 @@ def answer_dataset_question_with_ai(question: str, dataset_path: str) -> Dict[st
         try:
             repaired_code = repair_analysis_code(question, df, generated_code, first_error)
         except Exception as repair_error:
-            return ai_unavailable_response(question, repair_error)
+            return ai_unavailable_response(question, repair_error, analysis_model)
 
         try:
             raw_result = run_analysis_code_safely(repaired_code, df)
             generated_code = repaired_code
         except Exception as second_error:
-            return ai_unavailable_response(question, second_error)
+            return ai_unavailable_response(question, second_error, analysis_model)
 
     try:
         polished = polish_response(question, raw_result)
@@ -1176,6 +1221,7 @@ def answer_dataset_question_with_ai(question: str, dataset_path: str) -> Dict[st
         "question": question,
         "answer": polished.get("answer", raw_result.get("answer")),
         "analysis_mode": "ai_generated",
+        "analysis_model": analysis_model,
         "insights": polished.get("insights", raw_result.get("insights", [])),
         "recommended_followups": polished.get("recommended_followups", []),
         "tables": raw_result.get("tables", []),
