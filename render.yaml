@@ -17,3 +17,17 @@ services:
         value: "60"
       - key: GROQ_API_KEY
         sync: false
+
+  - type: web
+    name: datavault-ai-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://datavault-ai-backend.onrender.com
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

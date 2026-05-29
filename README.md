@@ -13,6 +13,12 @@ Live API:
 https://datavault-ai-backend.onrender.com
 ```
 
+Live frontend:
+
+```text
+https://datavault-ai-frontend.onrender.com
+```
+
 Swagger docs:
 
 ```text
@@ -152,16 +158,27 @@ https://github.com/Olubayode/datavault-ai-backend
 
 ## Render Deployment
 
-This backend is deployed on Render from GitHub:
+This project is deployed on Render from GitHub:
 
 ```text
 https://github.com/Olubayode/datavault-ai-backend
 ```
 
-Live backend:
+Render deploys two services from `render.yaml`:
+
+- `datavault-ai-backend`: FastAPI backend and AI analytics API
+- `datavault-ai-frontend`: Vite/React static frontend
+
+Live backend API:
 
 ```text
 https://datavault-ai-backend.onrender.com
+```
+
+Live frontend app:
+
+```text
+https://datavault-ai-frontend.onrender.com
 ```
 
 Live Swagger docs:
@@ -188,7 +205,13 @@ AI_ANALYSIS_TIMEOUT_SECONDS=60
 DEFAULT_DATASET_PATH=sample-data/Chile_real_estate_listings.csv
 ```
 
-After pushing to GitHub, Render automatically redeploys the latest commit.
+The frontend Render service uses:
+
+```text
+VITE_API_URL=https://datavault-ai-backend.onrender.com
+```
+
+After pushing to GitHub, Render automatically redeploys the backend and frontend services.
 
 ---
 
